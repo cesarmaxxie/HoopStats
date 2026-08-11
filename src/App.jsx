@@ -471,7 +471,7 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
   const semisGames = games.filter((g) => g.phase === "semis");
   const finalGame = games.find((g) => g.phase === "final");
   const semisFixtures = fixtures.filter((f) => f.phase === "semis");
-  const allGrupoFixtures = fixtures.filter((f) => f.phase === "grupos").sort((a, b) => a.numero - b.numero);
+  const allGrupoFixtures = fixtures.filter((f) => f.phase === "grupos").sort((a, b) => (a.numero || 0) - (b.numero || 0));
   function fixtureGame(f) {
     return games.find((g) => g.phase === f.phase && ((g.teamA === f.teamA && g.teamB === f.teamB) || (g.teamA === f.teamB && g.teamB === f.teamA)));
   }
@@ -593,11 +593,12 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
                   <div className="mt-4">
                     <h3 className="text-xs uppercase font-display faint mb-2">Jogos da fase de grupos (sorteados)</h3>
                     <div className="space-y-1.5">
-                      {allGrupoFixtures.map((f) => {
+                      {allGrupoFixtures.map((f, i) => {
                         const g = fixtureGame(f);
+                        const numero = f.numero || i + 1;
                         return (
                           <div key={f.id} className="text-sm card rounded-md px-3 py-2 flex items-center justify-between">
-                            <span><span className="amber font-display tabular mr-2">Jogo {f.numero}</span>{findTeam(teams, f.teamA).name} vs {findTeam(teams, f.teamB).name}</span>
+                            <span><span className="amber font-display tabular mr-2">Jogo {numero}</span>{findTeam(teams, f.teamA).name} vs {findTeam(teams, f.teamB).name}</span>
                             {g ? <span className="text-xs green uppercase font-display tabular">{g.scoreA} x {g.scoreB}</span> : <span className="text-xs faint uppercase font-display">aguardando súmula</span>}
                           </div>
                         );
