@@ -409,6 +409,7 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
   const { teams, players, games, fixtures, format } = champ;
   const [tab, setTab] = useState("bracket");
   const [configOpen, setConfigOpen] = useState(false);
+  const [gamesOpen, setGamesOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [compareA, setCompareA] = useState(teams[0]?.id || "");
@@ -435,6 +436,10 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
     const hasGames = games.some((g) => g.teamA === id || g.teamB === id);
     if (hasGames && !window.confirm("Esse time já tem jogos registrados. Remover mesmo assim? Os jogos antigos vão continuar existindo, mas o time some da lista.")) return;
     onUpdate((c) => ({ ...c, teams: c.teams.filter((t) => t.id !== id) }));
+  }
+  function removeGame(gameId) {
+    if (!window.confirm("Excluir este jogo? As estatísticas dos jogadores dele vão ser recalculadas sem ele. Essa ação não tem volta.")) return;
+    onUpdate((c) => ({ ...c, games: c.games.filter((g) => g.id !== gameId) }));
   }
   function handleFileChosen(e) {
     const f = e.target.files?.[0]; if (!f) return;
@@ -567,6 +572,25 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
                       <input value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} placeholder="Nome do novo time" className="input-dark rounded-md px-3 py-2 text-sm flex-1" onKeyDown={(e) => e.key === "Enter" && addTeam()} />
                       <button type="button" onClick={addTeam} className="amber-btn rounded-md px-3 flex items-center gap-1 text-sm font-display font-semibold uppercase"><Plus size={16} /> Add</button>
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isAdmin && games.length > 0 && (
+              <div className="card rounded-lg p-4 mb-6">
+                <button type="button" onClick={() => setGamesOpen((v) => !v)} className="flex items-center gap-2 text-sm font-display uppercase tracking-wide cursor-pointer"><FileUp size={15} className="amber" /> Jogos registrados ({games.length}) {gamesOpen ? "▲" : "▼"}</button>
+                {gamesOpen && (
+                  <div className="mt-4 space-y-1.5">
+                    {games.map((g) => (
+                      <div key={g.id} className="flex items-center justify-between text-sm card rounded-md px-3 py-2">
+                        <span>
+                          <span className="faint uppercase font-display text-xs mr-2">{PHASE_LABEL[g.phase] || g.phase}</span>
+                          {findTeam(teams, g.teamA).name} {g.scoreA} x {g.scoreB} {findTeam(teams, g.teamB).name}
+                        </span>
+                        <button type="button" onClick={() => removeGame(g.id)} title="Excluir este jogo" className="faint hover:text-white cursor-pointer"><Trash2 size={14} className="red" /></button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
