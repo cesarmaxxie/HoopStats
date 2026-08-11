@@ -233,27 +233,10 @@ export default function CampeonatoApp() {
 
   if (loadingData) return shell(<div className="px-6 py-10 text-center text-sm muted">Carregando campeonatos…</div>);
 
-  if (!role) {
-    return shell(
-      <div className="px-6 py-10 flex flex-col items-center text-center">
-        <div className="text-xs tracking-widest muted font-display uppercase mb-2">Jogos da Amizade</div>
-        <h1 className="font-display text-2xl font-semibold uppercase mb-8">Entrar como...</h1>
-        <div className="grid grid-cols-2 gap-4 max-w-md w-full">
-          <button type="button" onClick={() => setAdminLoginOpen(true)} className="card-btn rounded-lg p-6 flex flex-col items-center gap-2">
-            <Lock size={20} className="amber" /><span className="font-display uppercase text-sm">Administrador</span><span className="text-xs faint">Requer senha</span>
-          </button>
-          <button type="button" onClick={() => setRole("user")} className="card-btn rounded-lg p-6 flex flex-col items-center gap-2">
-            <UserCircle size={24} /><span className="font-display uppercase text-sm">Participante</span><span className="text-xs faint">Só visualiza</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (role === "admin" && !active) {
     return shell(<AdminList championships={championships} saveChampionship={saveChampionship} removeChampionship={removeChampionship} setActiveId={setActiveId} onExit={adminLogout} adminEmail={authedAdmin} />);
   }
-  if (role === "user" && !active) {
+  if (!active) {
     return shell(<PublicList championships={championships.filter((c) => c.status === "ativo")} setActiveId={setActiveId} onSwitchAdmin={() => setAdminLoginOpen(true)} />);
   }
   if (active) {
@@ -323,13 +306,21 @@ function AdminList({ championships, saveChampionship, removeChampionship, setAct
 function PublicList({ championships, setActiveId, onSwitchAdmin }) {
   return (
     <div className="px-6 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="text-xs tracking-widest muted font-display uppercase mb-1">Campeonatos ativos</div>
-          <h1 className="font-display text-2xl font-semibold uppercase">Meus campeonatos</h1>
+      <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center gap-2">
+          <Trophy size={20} className="amber" />
+          <span className="font-display text-lg font-semibold uppercase tracking-wide">HoopStats</span>
         </div>
-        <button type="button" onClick={onSwitchAdmin} className="ghost-btn text-xs font-display uppercase px-3 py-2 rounded-md">Sou administrador</button>
+        <button type="button" onClick={onSwitchAdmin} className="ghost-btn flex items-center gap-1.5 text-xs font-display uppercase px-3 py-2 rounded-md">
+          <Lock size={12} /> Administrador
+        </button>
       </div>
+
+      <div className="mb-8">
+        <h1 className="font-display text-2xl font-semibold uppercase mb-1">Campeonatos</h1>
+        <p className="text-sm muted">Acompanhe chaveamento, estatísticas e resultados em tempo real.</p>
+      </div>
+
       <div className="space-y-3 max-w-lg">
         {championships.map((c) => (
           <button key={c.id} type="button" onClick={() => setActiveId(c.id)} className="card-btn w-full text-left rounded-lg p-5 flex items-center justify-between">
