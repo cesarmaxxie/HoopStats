@@ -66,17 +66,52 @@ function parseSumulaHtml(html) {
 }
 
 // ---------- SORTEIO ----------
-function drawFixtures(teams, format) {
-  const shuffled = [...teams].sort(() => Math.random() - 0.5);
+// Método do rodízio (circle method): cada time joga no máximo 1x por rodada.
+// Evita que um time enfrente todos os adversários em sequência antes dos outros começarem.
+function roundRobinRounds(teamIds) {
+  let ids = [...teamIds];
+  const hasBye = ids.length % 2 !== 0;
+  if (hasBye) ids.push(null);
+  const n = ids.length;
+  const rounds = [];
+  let arr = [...ids];
+  for (let r = 0; r < n - 1; r++) {
+    const roundMatches = [];
+    for (let i = 0; i < n / 2; i++) {
+      const a = arr[i], b = arr[n - 1 - i];
+      if (a !== null && b !== null) roundMatches.push([a, b]);
+    }
+    rounds.push(roundMatches);
+    const fixed = arr[0];
+    const rest = arr.slice(1);
+    rest.unshift(rest.pop());
+    arr = [fixed, ...rest];
+  }
+  return rounds;
+}
+
+function drawFixtures(teams, format, startDate) {
+  const base = startDate ? new Date(startDate + "T12:00:00") : new Date();
+  const GAMES_PER_SATURDAY = 2;
+  function withSchedule(pairs, phase) {
+    return pairs.map(([a, b], i) => {
+      const d = new Date(base);
+      d.setDate(d.getDate() + 7 * Math.floor(i / GAMES_PER_SATURDAY));
+      const horario = i % GAMES_PER_SATURDAY === 0 ? "12:00" : "13:00";
+      return { id: phase + "_" + i, numero: i + 1, phase, teamA: a, teamB: b, data: d.toISOString().slice(0, 10), horario };
+    });
+  }
   if (format === "Mata-mata direto") {
-    const fixtures = [];
-    for (let i = 0; i < shuffled.length - 1; i += 2) fixtures.push({ id: "f" + i, numero: fixtures.length + 1, phase: "semis", teamA: shuffled[i].id, teamB: shuffled[i + 1].id });
-    return fixtures;
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
+    const pairs = [];
+    for (let i = 0; i < shuffled.length - 1; i += 2) pairs.push([shuffled[i].id, shuffled[i + 1].id]);
+    return withSchedule(pairs, "semis");
   }
   if (format === "Fase de grupos + mata-mata" || format === "Todos contra todos") {
-    const fixtures = [];
-    for (let i = 0; i < shuffled.length; i++) for (let j = i + 1; j < shuffled.length; j++) fixtures.push({ id: "f" + i + "_" + j, numero: fixtures.length + 1, phase: "grupos", teamA: shuffled[i].id, teamB: shuffled[j].id });
-    return fixtures;
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
+    const rounds = roundRobinRounds(shuffled.map((t) => t.id));
+    const pairs = rounds.flat();
+    return withSchedule(pairs, "grupos");
   }
   return [];
 }
@@ -358,7 +393,7 @@ function SetupView({ champ, onUpdate, onBack }) {
     onUpdate((c) => ({ ...c, teams: c.teams.filter((t) => t.id !== id) }));
   }
   function launch() {
-    const fixtures = drawFixtures(champ.teams, champ.format);
+    const fixtures = drawFixtures(champ.teams, champ.format, champ.startDate);
     onUpdate((c) => ({ ...c, fixtures, status: "ativo" }));
   }
   return (
@@ -620,9 +655,14 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
                       {allGrupoFixtures.map((f, i) => {
                         const g = fixtureGame(f);
                         const numero = f.numero || i + 1;
+                        const dataLabel = f.data ? new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : null;
                         return (
                           <div key={f.id} className="text-sm card rounded-md px-3 py-2 flex items-center justify-between">
-                            <span><span className="amber font-display tabular mr-2">Jogo {numero}</span>{findTeam(teams, f.teamA).name} vs {findTeam(teams, f.teamB).name}</span>
+                            <span>
+                              <span className="amber font-display tabular mr-2">Jogo {numero}</span>
+                              {findTeam(teams, f.teamA).name} vs {findTeam(teams, f.teamB).name}
+                              {dataLabel && <span className="faint text-xs ml-2">· {dataLabel}{f.horario ? ` ${f.horario}` : ""}</span>}
+                            </span>
                             {g ? <span className="text-xs green uppercase font-display tabular">{g.scoreA} x {g.scoreB}</span> : <span className="text-xs faint uppercase font-display">aguardando súmula</span>}
                           </div>
                         );
