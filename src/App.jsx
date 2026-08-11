@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import {
   Trophy, Users, GitCompare, ChevronLeft, Plus, Upload, FileUp, Check, ChevronRight,
-  Settings, ArrowLeft, Sparkles, AlertCircle, Shuffle, ShieldCheck, UserCircle, Lock, Trash2, Pencil, LogOut
+  Settings, ArrowLeft, Sparkles, AlertCircle, Shuffle, ShieldCheck, UserCircle, Lock, Trash2, Pencil, LogOut, X
 } from "lucide-react";
 import { db, auth } from "./firebase";
 import { collection, doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
@@ -70,12 +70,12 @@ function drawFixtures(teams, format) {
   const shuffled = [...teams].sort(() => Math.random() - 0.5);
   if (format === "Mata-mata direto") {
     const fixtures = [];
-    for (let i = 0; i < shuffled.length - 1; i += 2) fixtures.push({ id: "f" + i, phase: "semis", teamA: shuffled[i].id, teamB: shuffled[i + 1].id });
+    for (let i = 0; i < shuffled.length - 1; i += 2) fixtures.push({ id: "f" + i, numero: fixtures.length + 1, phase: "semis", teamA: shuffled[i].id, teamB: shuffled[i + 1].id });
     return fixtures;
   }
   if (format === "Fase de grupos + mata-mata" || format === "Todos contra todos") {
     const fixtures = [];
-    for (let i = 0; i < shuffled.length; i++) for (let j = i + 1; j < shuffled.length; j++) fixtures.push({ id: "f" + i + "_" + j, phase: "grupos", teamA: shuffled[i].id, teamB: shuffled[j].id });
+    for (let i = 0; i < shuffled.length; i++) for (let j = i + 1; j < shuffled.length; j++) fixtures.push({ id: "f" + i + "_" + j, numero: fixtures.length + 1, phase: "grupos", teamA: shuffled[i].id, teamB: shuffled[j].id });
     return fixtures;
   }
   return [];
@@ -354,6 +354,9 @@ function SetupView({ champ, onUpdate, onBack }) {
     onUpdate((c) => ({ ...c, teams: [...c.teams, { id: name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now().toString(36).slice(-3), name, color: PALETTE[c.teams.length % PALETTE.length] }] }));
     setNewTeamName("");
   }
+  function removeTeam(id) {
+    onUpdate((c) => ({ ...c, teams: c.teams.filter((t) => t.id !== id) }));
+  }
   function launch() {
     const fixtures = drawFixtures(champ.teams, champ.format);
     onUpdate((c) => ({ ...c, fixtures, status: "ativo" }));
@@ -379,7 +382,10 @@ function SetupView({ champ, onUpdate, onBack }) {
           <label className="text-xs faint uppercase font-display block mb-2">Times participantes ({champ.teams.length})</label>
           <div className="flex flex-wrap gap-2 mb-3">
             {champ.teams.map((t) => (
-              <div key={t.id} className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm card"><span className="w-2 h-2 rounded-full" style={{ background: t.color }} /> {t.name}</div>
+              <div key={t.id} className="flex items-center gap-2 rounded-full pl-3 pr-2 py-1.5 text-sm card">
+                <span className="w-2 h-2 rounded-full" style={{ background: t.color }} /> {t.name}
+                <button type="button" onClick={() => removeTeam(t.id)} title="Remover time" className="ml-1 faint hover:text-white cursor-pointer"><X size={13} /></button>
+              </div>
             ))}
             {champ.teams.length === 0 && <span className="text-sm faint">Nenhum time ainda.</span>}
           </div>
@@ -425,7 +431,11 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
     onUpdate((c) => ({ ...c, teams: [...c.teams, { id: name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now().toString(36).slice(-3), name, color: PALETTE[c.teams.length % PALETTE.length] }] }));
     setNewTeamName("");
   }
-
+  function removeTeam(id) {
+    const hasGames = games.some((g) => g.teamA === id || g.teamB === id);
+    if (hasGames && !window.confirm("Esse time já tem jogos registrados. Remover mesmo assim? Os jogos antigos vão continuar existindo, mas o time some da lista.")) return;
+    onUpdate((c) => ({ ...c, teams: c.teams.filter((t) => t.id !== id) }));
+  }
   function handleFileChosen(e) {
     const f = e.target.files?.[0]; if (!f) return;
     setFileName(f.name); setParseError(null); setParsedGame(null); setImported(false);
@@ -461,7 +471,10 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
   const semisGames = games.filter((g) => g.phase === "semis");
   const finalGame = games.find((g) => g.phase === "final");
   const semisFixtures = fixtures.filter((f) => f.phase === "semis");
-  const grupoFixturesPendentes = fixtures.filter((f) => f.phase === "grupos" && !games.some((g) => (g.teamA === f.teamA && g.teamB === f.teamB) || (g.teamA === f.teamB && g.teamB === f.teamA)));
+  const allGrupoFixtures = fixtures.filter((f) => f.phase === "grupos").sort((a, b) => a.numero - b.numero);
+  function fixtureGame(f) {
+    return games.find((g) => g.phase === f.phase && ((g.teamA === f.teamA && g.teamB === f.teamB) || (g.teamA === f.teamB && g.teamB === f.teamA)));
+  }
   const topScorers = players.map((p) => ({ player: p, agg: getPlayerAgg(games, players, p.id) })).filter((x) => x.agg).sort((a, b) => b.agg.avgPts - a.agg.avgPts).slice(0, 5);
   const teamsWithGames = teams.map((t) => ({ team: t, s: getTeamSummary(games, teams, t.id) })).filter((x) => x.s.games > 0);
   const bestAttack = teamsWithGames.slice().sort((a, b) => b.s.avgPF - a.s.avgPF)[0];
@@ -544,7 +557,12 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
                     <label className="text-xs faint uppercase font-display block mb-1">Formato</label>
                     <select value={format} onChange={(e) => onUpdate((c) => ({ ...c, format: e.target.value }))} className="input-dark rounded-md px-3 py-2 text-sm mb-4">{FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}</select>
                     <label className="text-xs faint uppercase font-display block mb-2">Times cadastrados</label>
-                    <div className="flex flex-wrap gap-2 mb-3">{teams.map((t) => (<div key={t.id} className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm card"><span className="w-2 h-2 rounded-full" style={{ background: t.color }} /> {t.name}</div>))}</div>
+                    <div className="flex flex-wrap gap-2 mb-3">{teams.map((t) => (
+                      <div key={t.id} className="flex items-center gap-2 rounded-full pl-3 pr-2 py-1.5 text-sm card">
+                        <span className="w-2 h-2 rounded-full" style={{ background: t.color }} /> {t.name}
+                        <button type="button" onClick={() => removeTeam(t.id)} title="Remover time" className="ml-1 faint hover:text-white cursor-pointer"><X size={13} /></button>
+                      </div>
+                    ))}</div>
                     <div className="flex gap-2 max-w-sm">
                       <input value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} placeholder="Nome do novo time" className="input-dark rounded-md px-3 py-2 text-sm flex-1" onKeyDown={(e) => e.key === "Enter" && addTeam()} />
                       <button type="button" onClick={addTeam} className="amber-btn rounded-md px-3 flex items-center gap-1 text-sm font-display font-semibold uppercase"><Plus size={16} /> Add</button>
@@ -571,11 +589,19 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
                     </tbody>
                   </table>
                 </div>
-                {grupoFixturesPendentes.length > 0 && (
+                {allGrupoFixtures.length > 0 && (
                   <div className="mt-4">
-                    <h3 className="text-xs uppercase font-display faint mb-2">Próximos jogos (sorteados)</h3>
+                    <h3 className="text-xs uppercase font-display faint mb-2">Jogos da fase de grupos (sorteados)</h3>
                     <div className="space-y-1.5">
-                      {grupoFixturesPendentes.map((f) => (<div key={f.id} className="text-sm card rounded-md px-3 py-2 flex items-center justify-between"><span>{findTeam(teams, f.teamA).name} vs {findTeam(teams, f.teamB).name}</span><span className="text-xs faint uppercase font-display">aguardando súmula</span></div>))}
+                      {allGrupoFixtures.map((f) => {
+                        const g = fixtureGame(f);
+                        return (
+                          <div key={f.id} className="text-sm card rounded-md px-3 py-2 flex items-center justify-between">
+                            <span><span className="amber font-display tabular mr-2">Jogo {f.numero}</span>{findTeam(teams, f.teamA).name} vs {findTeam(teams, f.teamB).name}</span>
+                            {g ? <span className="text-xs green uppercase font-display tabular">{g.scoreA} x {g.scoreB}</span> : <span className="text-xs faint uppercase font-display">aguardando súmula</span>}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
