@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /championships/{championshipId} {
+      // Qualquer pessoa pode LER os campeonatos (participantes acompanhando).
+      allow read: if true;
+
+      // Só o e-mail abaixo pode CRIAR, EDITAR ou EXCLUIR campeonatos.
+      // Troque pelo e-mail que você vai usar pra logar como administrador.
+      allow write: if request.auth != null
+                   && request.auth.token.email == "SEU_EMAIL_ADMIN@exemplo.com";
+    }
+  }
+}
