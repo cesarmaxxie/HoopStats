@@ -352,7 +352,7 @@ function PublicList({ championships, setActiveId, onSwitchAdmin }) {
 
       <div className="mb-8">
         <h1 className="font-display text-2xl font-semibold uppercase mb-1">Campeonatos</h1>
-        <p className="text-sm muted">Acompanhe chaveamento, estatísticas e resultados em tempo real.</p>
+        <p className="text-sm muted">Acompanhe as estatísticas e resultados em tempo real.</p>
       </div>
 
       <div className="space-y-3 max-w-lg">
