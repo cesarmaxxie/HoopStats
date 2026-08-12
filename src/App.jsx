@@ -240,7 +240,7 @@ export default function CampeonatoApp() {
   const active = championships.find((c) => c.id === activeId) || null;
 
   const shell = (children) => (
-    <div className="relative w-full" style={{ minHeight: 700, background: "#14171C", color: "#F2F0EA", fontFamily: "Manrope, sans-serif" }}>
+    <div className="relative w-full" style={{ minHeight: 700, background: "#F4F7FB", color: "#F2F0EA", fontFamily: "Manrope, sans-serif" }}>
       <style>{CSS}</style>{children}
     </div>
   );
