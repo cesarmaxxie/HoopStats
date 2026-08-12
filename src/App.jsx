@@ -343,7 +343,7 @@ function PublicList({ championships, setActiveId, onSwitchAdmin }) {
     <div className="px-6 py-6">
       <div className="flex items-center justify-between mb-10">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="HoopStats" style={{ height: 28 }} onError={(e) => { e.target.style.display = "none"; }} />
+          <img src="/logo.png" alt="HoopStats" style={{ height: 44 }} onError={(e) => { e.target.style.display = "none"; }} />
         </div>
         <button type="button" onClick={onSwitchAdmin} className="ghost-btn flex items-center gap-1.5 text-xs font-display uppercase px-3 py-2 rounded-md">
           <Lock size={12} /> Administrador
