@@ -285,7 +285,7 @@ function AdminList({ championships, saveChampionship, removeChampionship, setAct
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   async function createDraft() {
     const id = "c_" + Date.now().toString(36);
-    const draft = { id, name: "Novo campeonato", format: FORMATS[0], status: "rascunho", startDate: "", teams: [], players: [], games: [], fixtures: [] };
+    const draft = { id, name: "Novo campeonato", format: FORMATS[0], status: "rascunho", startDate: "", imageUrl: "", teams: [], players: [], games: [], fixtures: [] };
     await saveChampionship(draft);
     setActiveId(id);
   }
@@ -343,8 +343,7 @@ function PublicList({ championships, setActiveId, onSwitchAdmin }) {
     <div className="px-6 py-6">
       <div className="flex items-center justify-between mb-10">
         <div className="flex items-center gap-2">
-          <Trophy size={20} className="amber" />
-          <span className="font-display text-lg font-semibold uppercase tracking-wide">HoopStats</span>
+          <img src="/logo.png" alt="HoopStats" style={{ height: 28 }} onError={(e) => { e.target.style.display = "none"; }} />
         </div>
         <button type="button" onClick={onSwitchAdmin} className="ghost-btn flex items-center gap-1.5 text-xs font-display uppercase px-3 py-2 rounded-md">
           <Lock size={12} /> Administrador
@@ -359,9 +358,12 @@ function PublicList({ championships, setActiveId, onSwitchAdmin }) {
       <div className="space-y-3 max-w-lg">
         {championships.map((c) => (
           <button key={c.id} type="button" onClick={() => setActiveId(c.id)} className="card-btn w-full text-left rounded-lg p-5 flex items-center justify-between">
-            <div>
-              <div className="font-display text-lg uppercase font-semibold mb-1">{c.name}</div>
-              <div className="text-sm muted">{c.format} · {c.teams.length} times · {c.games.length} jogos registrados</div>
+            <div className="flex items-center gap-4">
+              {c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md object-cover flex-shrink-0" style={{ width: 48, height: 48 }} onError={(e) => { e.target.style.display = "none"; }} />}
+              <div>
+                <div className="font-display text-lg uppercase font-semibold mb-1">{c.name}</div>
+                <div className="text-sm muted">{c.format} · {c.teams.length} times · {c.games.length} jogos registrados</div>
+              </div>
             </div>
             <ChevronRight size={20} className="muted" />
           </button>
@@ -412,6 +414,13 @@ function SetupView({ champ, onUpdate, onBack }) {
         <div>
           <label className="text-xs faint uppercase font-display block mb-1">Data de início</label>
           <input type="date" value={champ.startDate} onChange={(e) => onUpdate((c) => ({ ...c, startDate: e.target.value }))} className="input-dark rounded-md px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs faint uppercase font-display block mb-1">Imagem / logo do campeonato (opcional)</label>
+          <input type="url" value={champ.imageUrl || ""} onChange={(e) => onUpdate((c) => ({ ...c, imageUrl: e.target.value }))} placeholder="https://... (link de uma imagem já hospedada)" className="input-dark rounded-md px-3 py-2 text-sm w-full" />
+          {champ.imageUrl && (
+            <img src={champ.imageUrl} alt="Prévia" className="mt-2 rounded-md object-cover" style={{ width: 96, height: 96 }} onError={(e) => { e.target.style.display = "none"; }} />
+          )}
         </div>
         <div>
           <label className="text-xs faint uppercase font-display block mb-2">Times participantes ({champ.teams.length})</label>
@@ -476,6 +485,9 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
     if (!window.confirm("Excluir este jogo? As estatísticas dos jogadores dele vão ser recalculadas sem ele. Essa ação não tem volta.")) return;
     onUpdate((c) => ({ ...c, games: c.games.filter((g) => g.id !== gameId) }));
   }
+  function updateFixtureSchedule(fixtureId, field, value) {
+    onUpdate((c) => ({ ...c, fixtures: c.fixtures.map((fx) => (fx.id === fixtureId ? { ...fx, [field]: value } : fx)) }));
+  }
   function handleFileChosen(e) {
     const f = e.target.files?.[0]; if (!f) return;
     setFileName(f.name); setParseError(null); setParsedGame(null); setImported(false);
@@ -531,9 +543,12 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
   return (
     <div>
       <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: "1px solid #2A2F3A" }}>
-        <div>
-          <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-xs muted mb-1 cursor-pointer"><ArrowLeft size={13} /> {isAdmin ? "Meus campeonatos" : "Campeonatos"}</button>
-          <h1 className="font-display text-2xl font-semibold tracking-tight uppercase">{champ.name}</h1>
+        <div className="flex items-center gap-3">
+          {champ.imageUrl && <img src={champ.imageUrl} alt="" className="rounded-md object-cover flex-shrink-0" style={{ width: 44, height: 44 }} onError={(e) => { e.target.style.display = "none"; }} />}
+          <div>
+            <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-xs muted mb-1 cursor-pointer"><ArrowLeft size={13} /> {isAdmin ? "Meus campeonatos" : "Campeonatos"}</button>
+            <h1 className="font-display text-2xl font-semibold tracking-tight uppercase">{champ.name}</h1>
+          </div>
         </div>
         {isAdmin && (
           <button type="button" onClick={() => setImportOpen((v) => !v)} className="amber-btn flex items-center gap-2 font-display font-semibold uppercase text-sm tracking-wide px-4 py-2.5 rounded-md">
@@ -594,6 +609,11 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
                   <div className="mt-4">
                     <label className="text-xs faint uppercase font-display block mb-1">Nome do campeonato</label>
                     <input value={champ.name} onChange={(e) => onUpdate((c) => ({ ...c, name: e.target.value }))} className="input-dark rounded-md px-3 py-2 text-sm w-full mb-4" />
+                    <label className="text-xs faint uppercase font-display block mb-1">Imagem / logo do campeonato</label>
+                    <input type="url" value={champ.imageUrl || ""} onChange={(e) => onUpdate((c) => ({ ...c, imageUrl: e.target.value }))} placeholder="https://... (link de uma imagem já hospedada)" className="input-dark rounded-md px-3 py-2 text-sm w-full mb-1" />
+                    {champ.imageUrl && (
+                      <img src={champ.imageUrl} alt="Prévia" className="mb-4 rounded-md object-cover" style={{ width: 80, height: 80 }} onError={(e) => { e.target.style.display = "none"; }} />
+                    )}
                     <label className="text-xs faint uppercase font-display block mb-1">Formato</label>
                     <select value={format} onChange={(e) => onUpdate((c) => ({ ...c, format: e.target.value }))} className="input-dark rounded-md px-3 py-2 text-sm mb-4">{FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}</select>
                     <label className="text-xs faint uppercase font-display block mb-2">Times cadastrados</label>
@@ -657,11 +677,18 @@ function Dashboard({ champ, isAdmin, onUpdate, onBack }) {
                         const numero = f.numero || i + 1;
                         const dataLabel = f.data ? new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : null;
                         return (
-                          <div key={f.id} className="text-sm card rounded-md px-3 py-2 flex items-center justify-between">
-                            <span>
+                          <div key={f.id} className="text-sm card rounded-md px-3 py-2 flex items-center justify-between flex-wrap gap-y-1">
+                            <span className="flex items-center flex-wrap gap-x-1">
                               <span className="amber font-display tabular mr-2">Jogo {numero}</span>
                               {findTeam(teams, f.teamA).name} vs {findTeam(teams, f.teamB).name}
-                              {dataLabel && <span className="faint text-xs ml-2">· {dataLabel}{f.horario ? ` ${f.horario}` : ""}</span>}
+                              {isAdmin ? (
+                                <span className="flex items-center gap-1 ml-2">
+                                  <input type="date" value={f.data || ""} onChange={(e) => updateFixtureSchedule(f.id, "data", e.target.value)} className="input-dark rounded px-1.5 py-0.5 text-xs" />
+                                  <input type="time" value={f.horario || ""} onChange={(e) => updateFixtureSchedule(f.id, "horario", e.target.value)} className="input-dark rounded px-1.5 py-0.5 text-xs w-[80px]" />
+                                </span>
+                              ) : (
+                                dataLabel && <span className="faint text-xs ml-2">· {dataLabel}{f.horario ? ` ${f.horario}` : ""}</span>
+                              )}
                             </span>
                             {g ? <span className="text-xs green uppercase font-display tabular">{g.scoreA} x {g.scoreB}</span> : <span className="text-xs faint uppercase font-display">aguardando súmula</span>}
                           </div>
